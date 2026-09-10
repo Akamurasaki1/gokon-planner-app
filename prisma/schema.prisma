@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum OrganizerRole {
+  USER
+  ADMIN
+}
+
+enum GenderType {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum EventStatus {
+  OPEN
+  MATCHING
+  CONFIRMED
+  CLOSED
+  CANCELED
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  WITHDRAWN
+}
+
+enum ReportTargetType {
+  EVENT
+  ORGANIZER
+  MESSAGE
+}
+
+enum ReportReason {
+  SOLICITATION
+  HARASSMENT
+  FRAUD
+  INAPPROPRIATE_CONTENT
+  OTHER
+}
+
+model Organizer {
+  id                     String      @id @default(cuid())
+  email                  String      @unique
+  passwordHash           String
+  displayName            String
+  role                   OrganizerRole @default(USER)
+  ageVerified            Boolean     @default(false)
+  ageBand                String?     // 20-24, 25-29 など
+  affiliationCategory    String?     // 大学生(理系), 社会人 など
+  activityArea           String?
+  bio                    String?
+  avatarUrl              String?
+  isActive               Boolean     @default(true)
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  ownedEvents            EventRequest[] @relation("EventOwner")
+  applications           Application[]
+  roomMessages           EventRoomMessage[]
+  reportsCreated         Report[] @relation("ReportCreator")
+  reportsReceived        Report[] @relation("ReportTargetOrganizer")
+}
+
+model EventRequest {
+  id                     String      @id @default(cuid())
+  ownerId                String
+  title                  String
+  description            String?
+  areaPrefecture         String
+  areaStation            String?
+  scheduleText           String      // MVPではテキスト（複数候補）
+  timeSlot               String      // DAY/NIGHT など
+  budgetMin              Int
+  budgetMax              Int
+  missingGender          GenderType
+  missingCount           Int
+  expectedTotalCount     Int
+  preferredAgeBand       String
+  preferredAffiliation   String
+  status                 EventStatus @default(OPEN)
+  closedAt               DateTime?
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  owner                  Organizer   @relation("EventOwner", fields: [ownerId], references: [id])
+  applications           Application[]
+  roomMessages           EventRoomMessage[]
+  reports                Report[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([areaPrefecture])
+}
+
+model Application {
+  id                     String      @id @default(cuid())
+  eventId                String
+  organizerId            String
+  status                 ApplicationStatus @default(PENDING)
+
+  offeredGender          GenderType
+  offeredCount           Int
+  ageBandComposition     String      // 例: "20-24:2,25-29:1"
+  affiliationComposition String      // 例: "大学生(理系):2,社会人:1"
+  contactableHours       String?
+  note                   String?
+
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  event                  EventRequest @relation(fields: [eventId], references: [id])
+  organizer              Organizer    @relation(fields: [organizerId], references: [id])
+
+  @@unique([eventId, organizerId])
+  @@index([eventId])
+  @@index([organizerId])
+  @@index([status])
+}
+
+model EventRoomMessage {
+  id                     String      @id @default(cuid())
+  eventId                String
+  organizerId            String
+  body                   String
+  createdAt              DateTime    @default(now())
+
+  event                  EventRequest @relation(fields: [eventId], references: [id])
+  organizer              Organizer    @relation(fields: [organizerId], references: [id])
+
+  @@index([eventId, createdAt])
+}
+
+model Report {
+  id                     String      @id @default(cuid())
+  reporterId             String
+  targetType             ReportTargetType
+  targetEventId          String?
+  targetOrganizerId      String?
+  targetMessageId        String?
+  reason                 ReportReason
+  detail                 String?
+  createdAt              DateTime    @default(now())
+
+  reporter               Organizer    @relation("ReportCreator", fields: [reporterId], references: [id])
+  targetEvent            EventRequest? @relation(fields: [targetEventId], references: [id])
+  targetOrganizer        Organizer?    @relation("ReportTargetOrganizer", fields: [targetOrganizerId], references: [id])
+
+  @@index([reporterId])
+  @@index([targetType])
+  @@index([targetEventId])
+  @@index([targetOrganizerId])
+}
