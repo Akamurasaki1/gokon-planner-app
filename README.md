@@ -14,16 +14,13 @@
 - SQLite
 - Zod
 
-## ディレクトリ（主要）
-- `app/` 画面・ルーティング
-- `features/` 機能単位ロジック（events/applications）
-- `lib/` 共通処理（db/errors/utils）
-- `prisma/` スキーマ
-- `docs/` 仕様・モック
+## 前提
+- Node.js 20.11.0 以上を推奨
 
 ## 1) ローカルで起動
 
 ```bash
+rm -rf node_modules package-lock.json
 npm install
 cp .env.example .env
 npm run prisma:migrate
@@ -32,6 +29,14 @@ npm run dev
 ```
 
 起動後: `http://localhost:3000`
+
+> `npm run prisma:seed` 実行時に表示される `DUMMY_ORGANIZER_ID` を `.env` に設定してください。
+
+例:
+
+```env
+DUMMY_ORGANIZER_ID="cmxxxxxxxxxxxx"
+```
 
 ## 2) MVPの使い方
 - 一覧: `/events`
@@ -51,7 +56,7 @@ GitHub Pagesではサーバー実行ができないため、
 ### Pages公開（簡易）
 1. GitHubの `Settings > Pages`
 2. Build and deployment: `Deploy from a branch`
-3. Branch: `main` / folder: `/root` ではなく、必要なら `/docs` を選択
+3. Branch: `main` / folder: `/docs` を選択（仕様書確認向け）
 
 ※ 実アプリの動作確認は次項のVercel推奨
 
